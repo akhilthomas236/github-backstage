@@ -1,0 +1,26 @@
+name: Publish to Backstage
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - '**/catalog-info.yaml'
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repository name'
+        required: true
+        type: string
+
+jobs:
+  call-reusable-workflow:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    uses: ${{ github.repository_owner }}/backstage-github/.github/workflows/publish-backstage-reusable.yml@main
+    with:
+      repository: ${{ github.event.inputs.repository || github.event.repository.name }}
+    secrets:
+      AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+      BACKSTAGE_URL: ${{ secrets.BACKSTAGE_URL }}
+      GITHUB_API_URL: ${{ secrets.GITHUB_API_URL }}

@@ -1,0 +1,43 @@
+name: Handle Force Merge Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  handle-force-merge:
+    runs-on: ubuntu-latest
+    if: github.event.comment.body == '/force-merge'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check and Handle Force Merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+          GITHUB_ORG: ${{ github.repository_owner }}
+          BACKSTAGE_URL: ${{ secrets.BACKSTAGE_URL }}
+          GITHUB_API_URL: ${{ secrets.GITHUB_API_URL }}
+          FORCE_MERGE_ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python - <<EOF
+          from backstage_automation import BackstageAutomation
+          import os
+          
+          automation = BackstageAutomation(
+              os.environ["GITHUB_TOKEN"],
+              os.environ["GITHUB_ORG"],
+              os.environ.get("GITHUB_API_URL")
+          )
+          
+          automation.check_and_handle_force_merge()
+          EOF

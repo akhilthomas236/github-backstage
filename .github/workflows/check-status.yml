@@ -1,0 +1,44 @@
+name: Check Onboarding Status
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Run every 4 hours
+  workflow_dispatch:
+    inputs:
+      organization:
+        description: 'GitHub Organization Name'
+        required: true
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check Repository Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+          GITHUB_ORG: ${{ github.event.inputs.organization || secrets.DEFAULT_ORG }}
+          BACKSTAGE_URL: ${{ secrets.BACKSTAGE_URL }}
+          GITHUB_API_URL: ${{ secrets.GITHUB_API_URL }}
+          CHECK_ONLY: "true"
+        run: python backstage_automation.py
+
+      - name: Create Status Report
+        if: always()
+        run: |
+          echo "## Backstage Integration Status" >> $GITHUB_STEP_SUMMARY
+          echo "Organization: $GITHUB_ORG" >> $GITHUB_STEP_SUMMARY
+          if [ -f "status_report.txt" ]; then
+            cat status_report.txt >> $GITHUB_STEP_SUMMARY
+          fi

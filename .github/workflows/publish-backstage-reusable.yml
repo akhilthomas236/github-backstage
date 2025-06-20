@@ -1,0 +1,65 @@
+name: Publish to Backstage (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository name'
+        required: true
+        type: string
+    secrets:
+      AUTOMATION_TOKEN:
+        required: true
+      BACKSTAGE_URL:
+        required: true
+      BACKSTAGE_TOKEN:
+        required: true
+      GITHUB_API_URL:
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Publish to Backstage
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+          BACKSTAGE_URL: ${{ secrets.BACKSTAGE_URL }}
+          BACKSTAGE_TOKEN: ${{ secrets.BACKSTAGE_TOKEN }}
+          GITHUB_API_URL: ${{ secrets.GITHUB_API_URL }}
+        run: |
+          python - <<EOF
+          from backstage_automation import BackstageAutomation
+          import os
+          
+          automation = BackstageAutomation(
+              os.environ["GITHUB_TOKEN"],
+              "${{ github.repository_owner }}",
+              os.environ.get("GITHUB_API_URL")
+          )
+          
+          # Publish directly using raw API call
+          success = automation.publish_raw_to_backstage(
+              os.environ["BACKSTAGE_URL"],
+              "catalog-info.yaml"  # Path to the file in the repository
+          )
+          
+          if success:
+              print("✅ Successfully published to Backstage catalog using raw API")
+              exit(0)
+          else:
+              print("❌ Failed to publish to Backstage catalog")
+              exit(1)
+          EOF
